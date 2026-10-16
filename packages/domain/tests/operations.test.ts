@@ -1,0 +1,7 @@
+import {describe,it,expect} from 'vitest';import {workerHealth,failureGuidance} from '../src/operations';
+const now=200000,good={at:now,startedAt:now-50000,dispatch:{lastSuccess:now-4000,failed:false},monitoring:{lastSuccess:now-10000,failed:false}};
+describe('runtime health boundaries',()=>{
+ it('requires recent heartbeat and both progressing loops',()=>{expect(workerHealth(good,now).state).toBe('ONLINE');expect(workerHealth({...good,at:now-31000},now).state).toBe('STALE');expect(workerHealth({...good,dispatch:{lastSuccess:now-100000,failed:false}},now).state).toBe('DEGRADED');expect(workerHealth({...good,monitoring:{lastSuccess:now,failed:true}},now).state).toBe('DEGRADED');});
+ it('rejects malformed/future timestamps and allows startup grace',()=>{expect(workerHealth({at:'not a date'},now).state).toBe('UNKNOWN');expect(workerHealth({...good,at:1e20},now).state).toBe('UNKNOWN');expect(workerHealth({...good,at:now+6000},now).state).toBe('STALE');expect(workerHealth({...good,dispatch:{lastSuccess:null,failed:false}},now).state).toBe('ONLINE');expect(workerHealth({...good,startedAt:now-100000,dispatch:{lastSuccess:null,failed:false}},now).state).toBe('DEGRADED');});
+ it('requires reconciliation for uncertain requests',()=>{expect(failureGuidance('UNKNOWN_START')).toContain('must not be automatically repeated');expect(failureGuidance('UNKNOWN_OUTCOME')).toContain('Inspect');expect(failureGuidance('BLOCKED')).toContain('manually');});
+});

@@ -1,0 +1,5 @@
+import {parseHotelSearch,type HotelSearchQuery} from '@tripsaathi/domain';
+export class SerpApiHotelClient{
+ constructor(private readonly key:string,private readonly request:typeof fetch=fetch){}
+ async search(query:HotelSearchQuery){if(!this.key)throw new Error('SerpApi key missing');const url=new URL('https://serpapi.com/search.json');for(const [key,value]of Object.entries({engine:'google_hotels',q:query.location,check_in_date:query.checkIn,check_out_date:query.checkOut,adults:query.adults,children:0,currency:'INR',hl:'en',gl:'in',no_cache:'true',api_key:this.key}))url.searchParams.set(key,String(value));let response:Response;try{response=await this.request(url,{signal:AbortSignal.timeout(45000),redirect:'error',headers:{Accept:'application/json'}});}catch{throw new Error('Search network outcome is uncertain; no automatic retry.');}if(!response.ok)throw new Error(`Search provider HTTP ${response.status}`);try{return parseHotelSearch(await response.json(),query);}catch{throw new Error('Search response failed route/date/currency/schema verification.');}}
+}

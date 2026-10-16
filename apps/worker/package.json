@@ -1,0 +1,29 @@
+{
+  "name": "@tripsaathi/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@tripsaathi/database": "workspace:*",
+    "@tripsaathi/domain": "workspace:*",
+    "bullmq": "^5.60.0",
+    "dotenv": "^16.6.0",
+    "ioredis": "^5.8.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0"
+  },
+  "dependenciesMeta": {
+    "@tripsaathi/domain": {
+      "injected": true
+    },
+    "@tripsaathi/database": {
+      "injected": true
+    }
+  }
+}

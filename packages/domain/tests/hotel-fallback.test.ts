@@ -1,0 +1,12 @@
+import {describe,it,expect} from 'vitest';
+import {hotelFallbackPlan} from '../src/hotel-fallback';
+import {parseHotelSearch} from '../src/hotel-search';
+const now=Date.now(),query={location:'Mumbai airport hotels',checkIn:'2026-10-17',checkOut:'2026-10-18',adults:2,currency:'INR' as const};
+const result=parseHotelSearch({search_metadata:{created_at:new Date(now).toISOString()},search_parameters:{engine:'google_hotels',q:query.location,check_in_date:query.checkIn,check_out_date:query.checkOut,currency:'INR',adults:2,children:0},properties:[{type:'hotel',name:'Synthetic hotel',total_rate:{extracted_lowest:2500}}]},query,now);
+const task={id:'search-1',revision:2,kind:'SERPAPI_HOTEL_SEARCH',status:'COMPLETED',url:'https://www.google.com/travel/hotels',expiresAt:result.expiresAt,result,context:{query,itemId:'hotel-1'}};
+describe('hotel selection to supplier handoff',()=>{
+ it('binds selected public evidence to ordered guidance without spending authority',()=>{const p=hotelFallbackPlan(task,0,2,'hotel-1',[],now);expect(p.amountMinor).toBe(0);expect(p.costStatus).toBe('UNKNOWN');expect(p.actions.every(a=>a.mode==='USER_HANDOFF'&&!a.costKnown)).toBe(true);expect(p.actions.find(a=>a.key==='review-original')?.dependsOn).toEqual(['confirm-fallback']);expect(p.actions.find(a=>a.key==='confirm-fallback')?.dependsOn).toEqual(['verify-arrival']);expect(p.evidence[0].facts[0].statement).toContain('250000');expect(p.expiresAt).toBe(result.expiresAt);});
+ it('rejects stale revisions, expired observations, incorrect arrangement and invalid index',()=>{expect(()=>hotelFallbackPlan(task,0,3,'hotel-1',[],now)).toThrow();expect(()=>hotelFallbackPlan(task,0,2,'hotel-2',[],now)).toThrow();expect(()=>hotelFallbackPlan(task,1,2,'hotel-1',[],now)).toThrow();expect(()=>hotelFallbackPlan(task,0,2,'hotel-1',[],now+600001)).toThrow();});
+ it('cannot extend a public search expiry by editing the task timestamp',()=>{const altered={...task,expiresAt:new Date(now+3600000).toISOString()};expect(hotelFallbackPlan(altered,0,2,'hotel-1',[],now).expiresAt).toBe(result.expiresAt);});
+ it('keeps search observations distinct from TinyFish official policy passages',()=>{const p=hotelFallbackPlan(task,0,2,'hotel-1',[task],now);expect(p.evidence).toHaveLength(1);expect(p.evidence[0].facts[0].passage).toContain('no official supplier passage');expect(p.actions.find(a=>a.key==='review-original')?.evidenceIds).toEqual([]);});
+});

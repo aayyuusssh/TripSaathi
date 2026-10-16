@@ -1,0 +1,9 @@
+import {prisma,Prisma} from '@tripsaathi/database';import {notificationAllowed} from '@tripsaathi/domain';
+export async function createNotification(tx:Prisma.TransactionClient,ownerId:string,input:{sourceKey:string;tripId?:string;kind:string;title:string;message:string}){const pref=await tx.notificationPreference.findUnique({where:{ownerId}});if(pref&&!pref.inAppEnabled)return;await tx.notification.upsert({where:{sourceKey:input.sourceKey},create:{ownerId,...input},update:{}});}
+export async function deliverNotifications(){
+ const exists=await prisma.workerCursor.findUnique({where:{id:'trip-notifications'}});if(!exists){const last=await prisma.tripEvent.aggregate({_max:{id:true}});await prisma.workerCursor.upsert({where:{id:'trip-notifications'},create:{id:'trip-notifications',cursor:last._max.id??0},update:{}});return;}
+ await prisma.$transaction(async tx=>{await tx.$queryRaw`SELECT "id" FROM "WorkerCursor" WHERE "id"='trip-notifications' FOR UPDATE`;const cursor=await tx.workerCursor.findUniqueOrThrow({where:{id:'trip-notifications'}});const events=await tx.tripEvent.findMany({where:{id:{gt:cursor.cursor}},orderBy:{id:'asc'},take:100,include:{trip:{select:{ownerId:true}}}});
+  for(const event of events){const pref=await tx.notificationPreference.findUnique({where:{ownerId:event.trip.ownerId}});if(notificationAllowed(event.type,event.provenance,pref?.inAppEnabled??true,pref?.includeReplay??false))await createNotification(tx,event.trip.ownerId,{sourceKey:`event:${event.id}:${event.trip.ownerId}`,tripId:event.tripId,kind:event.type,title:event.provenance==='REPLAY'?'Simulation update':'Trip workflow update',message:event.message});}
+  if(events.length)await tx.workerCursor.update({where:{id:cursor.id},data:{cursor:events.at(-1)!.id}});
+ },{isolationLevel:'ReadCommitted',timeout:10000});
+}

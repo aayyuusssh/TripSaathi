@@ -1,0 +1,37 @@
+import {config} from 'dotenv';
+import {createRequire} from 'node:module';
+import {randomUUID} from 'node:crypto';
+import assert from 'node:assert/strict';
+config();const require=createRequire(import.meta.url);
+const {TripsService}=require('../apps/api/dist/trips.service.js');
+const {prisma}=require('../apps/api/node_modules/@tripsaathi/database/dist/index.js');
+const {demoTrip}=require('../packages/domain/dist/index.js');
+const service=new TripsService(),owner='test-itinerary-'+randomUUID(),foreign='another-owner';
+try{
+ let trip=await service.create(demoTrip('RAIL'),owner,true);
+ assert.equal(trip.legacyItems.length,0);
+ await assert.rejects(()=>service.get(trip.id,foreign),/Trip not found/);
+ assert.equal((await service.list(foreign)).some(t=>t.id===trip.id),false);
+ const rail=trip.items.find(i=>i.category==='RAIL');
+ trip=await service.replay(trip.id,owner,{itemId:rail.id,delayMinutes:180,serviceStatus:'DELAYED',eventKey:randomUUID(),expectedRevision:trip.revision});
+ assert.ok(trip.assessments[0].result.some(i=>i.state==='ACTION_REQUIRED'));
+ const item={id:rail.id,category:'RAIL',label:rail.label,provider:rail.provider,timezone:rail.timezone,startsAt:rail.startsAt.toISOString(),endsAt:rail.endsAt.toISOString(),details:rail.details};
+ const mutation={item,expectedRevision:trip.revision,mutationKey:randomUUID()};
+ const before=trip.revision;trip=await service.editItem(trip.id,rail.id,owner,mutation);
+ assert.equal(trip.revision,before+1);
+ assert.equal(trip.items.find(i=>i.id===rail.id).revision,2);
+ assert.ok(trip.assessments[0].result.every(i=>i.state==='UNKNOWN'),'Old status must not survive a booking edit');
+ const duplicate=await service.editItem(trip.id,rail.id,owner,mutation);
+ assert.equal(duplicate.revision,trip.revision);assert.equal(duplicate.mutationAlreadyApplied,true);
+ await assert.rejects(()=>service.editItem(trip.id,rail.id,owner,{...mutation,mutationKey:randomUUID()}),/Trip changed/);
+ await assert.rejects(()=>service.editItem(trip.id,rail.id,foreign,{...mutation,expectedRevision:trip.revision,mutationKey:randomUUID()}),/Trip not found/);
+ const pickup=trip.items.find(i=>i.category==='TRANSFER');
+ await assert.rejects(()=>service.connect(trip.id,owner,{expectedRevision:trip.revision,mutationKey:randomUUID(),dependency:{fromItemId:pickup.id,toItemId:rail.id,kind:'CONNECTION',bufferMinutes:0,deadline:rail.startsAt.toISOString(),confirmed:true}}),/cycles/);
+ assert.equal((await service.get(trip.id,owner)).revision,trip.revision,'Invalid graph must roll back');
+ trip=await service.replay(trip.id,owner,{itemId:rail.id,delayMinutes:0,serviceStatus:'CANCELLED',eventKey:randomUUID(),expectedRevision:trip.revision});
+ assert.ok(trip.assessments[0].result.every(i=>i.state==='ACTION_REQUIRED'&&i.expectedAt===null));
+ const plans=await service.recovery(trip.id,owner);
+ await assert.rejects(()=>service.approve(plans[0].id,foreign,{digest:plans[0].digest,maxAmountMinor:plans[0].amountMinor}),/Plan not found/);
+ console.log('PASS: persisted rail details, ownership, revision/idempotency, stale-status invalidation, graph rollback, cancellation propagation, approval isolation.');
+ console.log('Hidden regression trip retained:',trip.id);
+}finally{await prisma.$disconnect();}

@@ -1,0 +1,29 @@
+{
+  "name": "tripsaathi",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm build:packages && concurrently -n web,api,worker -c cyan,green,yellow \"pnpm --filter @tripsaathi/web dev\" \"pnpm --filter @tripsaathi/api dev\" \"pnpm --filter @tripsaathi/worker dev\"",
+    "build:packages": "pnpm --filter @tripsaathi/domain build && pnpm --filter @tripsaathi/database build && node scripts/sync-workspace.cjs",
+    "build": "pnpm build:packages && pnpm --filter @tripsaathi/api build && pnpm --filter @tripsaathi/worker build && pnpm --filter @tripsaathi/web build",
+    "typecheck": "pnpm build:packages && pnpm -r typecheck",
+    "test": "pnpm --filter @tripsaathi/domain test",
+    "db:generate": "prisma generate --schema packages/database/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema packages/database/prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema packages/database/prisma/schema.prisma",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "check:integration": "node scripts/integration.mjs",
+    "verify:local": "node scripts/verify-local.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "prisma": "^6.19.0",
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  }
+}

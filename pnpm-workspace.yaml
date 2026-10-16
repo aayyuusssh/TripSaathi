@@ -1,0 +1,12 @@
+packages:
+  - apps/*
+  - packages/*
+injectWorkspacePackages: true
+syncInjectedDepsAfterScripts:
+  - build
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild
+  - sharp

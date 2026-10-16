@@ -1,0 +1,7 @@
+import {afterEach,describe,it,expect,vi} from 'vitest';
+import {api,authenticatedFetch,setApiTokenGetter} from '../../../apps/web/app/client-api';
+afterEach(()=>{setApiTokenGetter(undefined);vi.unstubAllGlobals();});
+describe('private browser API transport',()=>{
+ it('refreshes the session getter and forwards bearer only to local API paths',async()=>{let calls=0;setApiTokenGetter(async()=>`synthetic-${++calls}`);const requests:RequestInit[]=[];vi.stubGlobal('fetch',vi.fn(async(_url:string,init:RequestInit)=>{requests.push(init);return new Response('{}',{status:200});}));await api('trips');await authenticatedFetch('/api/v1/imports',{method:'POST',body:new FormData()});expect(new Headers(requests[0].headers).get('Authorization')).toBe('Bearer synthetic-1');expect(new Headers(requests[1].headers).get('Authorization')).toBe('Bearer synthetic-2');expect(new Headers(requests[1].headers).has('Content-Type')).toBe(false);await expect(authenticatedFetch('https://external.invalid')).rejects.toThrow('this application API');expect(fetch).toHaveBeenCalledTimes(2);});
+ it('preserves authentication failures without exposing tokens in error messages',async()=>{setApiTokenGetter(async()=> 'synthetic-private-token');vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({message:'Token validation failed'}),{status:401})));await expect(api('trips')).rejects.toThrow('Token validation failed');setApiTokenGetter(undefined);});
+});

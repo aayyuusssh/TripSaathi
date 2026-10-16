@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model Trip {
+  id String @id @default(cuid())
+  ownerId String @default("local-demo")
+  title String
+  destination String
+  revision Int @default(1)
+  budgetMinor Int @default(1000000)
+  currency String @default("INR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items TripItem[]
+  dependencies Dependency[]
+  observations StatusObservation[]
+  assessments Assessment[]
+  plans RecoveryPlan[]
+  events TripEvent[]
+  tasks AgentTask[]
+  mutations TripMutation[]
+  monitors MonitoringSubscription[]
+  imports DocumentImport[]
+  notifications Notification[]
+  @@index([ownerId, createdAt])
+}
+model TripItem {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category String
+  label String
+  provider String
+  provenance String @default("IMPORTED")
+  startsAt DateTime
+  endsAt DateTime
+  timezone String @default("Asia/Kolkata")
+  details Json
+  revision Int @default(1)
+  validationVersion Int @default(1)
+  origin Json?
+  destination Json?
+  monitors MonitoringSubscription[]
+  @@index([tripId])
+}
+model Dependency {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromItemId String
+  toItemId String
+  bufferMinutes Int
+  deadline DateTime
+  confirmed Boolean @default(false)
+  kind String
+  bufferSource String @default("ASSUMED")
+  protection String @default("UNKNOWN")
+  evidenceUrl String?
+  @@index([tripId])
+}
+model StatusObservation {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  itemId String
+  eventKey String @unique
+  delayMinutes Int
+  itemRevision Int @default(1)
+  serviceStatus String @default("SCHEDULED")
+  actualArrivalAt DateTime?
+  arrivalLocation String?
+  source String
+  provenance String
+  observedAt DateTime
+  receivedAt DateTime @default(now())
+  providerId String?
+  providerFlightId String?
+  estimatedArrivalAt DateTime?
+  disposition String @default("ACCEPTED")
+  @@index([tripId, observedAt])
+}
+model Assessment {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  revision Int
+  result Json
+  createdAt DateTime @default(now())
+  @@index([tripId, revision])
+}
+model RecoveryPlan {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  revision Int
+  title String
+  description String
+  status String @default("AWAITING_APPROVAL")
+  digest String
+  amountMinor Int
+  currency String @default("INR")
+  actions Json
+  provenance String @default("SANDBOX")
+  planType String @default("SANDBOX")
+  costStatus String @default("ILLUSTRATIVE")
+  evidence Json?
+  unknowns Json?
+  explanation Json?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  approval Approval?
+  attempts ActionAttempt[]
+  @@index([tripId, revision])
+}
+model Approval {
+  id String @id @default(cuid())
+  planId String @unique
+  plan RecoveryPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  digest String
+  maxAmountMinor Int
+  actorId String
+  approvedAt DateTime @default(now())
+  withdrawnAt DateTime?
+  withdrawalReason String?
+}
+model ActionAttempt {
+  id String @id @default(cuid())
+  planId String
+  plan RecoveryPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  actionKey String @unique
+  label String
+  status String
+  reference String?
+  evidence String?
+  outcomeSource String @default("SANDBOX")
+  resultKey String?
+  reportedAt DateTime?
+  updatedAt DateTime @updatedAt
+}
+model AgentTask {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  revision Int
+  kind String
+  url String
+  status String @default("QUEUED")
+  runId String?
+  result Json?
+  error String?
+  context Json?
+  expiresAt DateTime?
+  callbackToken String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, updatedAt])
+}
+model Outbox {
+  id String @id @default(cuid())
+  type String
+  payload Json
+  dispatchedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([dispatchedAt, createdAt])
+}
+model TripEvent {
+  id Int @id @default(autoincrement())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type String
+  message String
+  provenance String
+  createdAt DateTime @default(now())
+  @@index([tripId, id])
+}
+model TripMutation {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  requestKey String
+  fingerprint String
+  revision Int
+  createdAt DateTime @default(now())
+  @@unique([tripId, requestKey])
+}
+model MonitoringSubscription {
+  id String @id @default(cuid())
+  tripId String
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  itemId String
+  item TripItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemRevision Int
+  providerId String @default("FLIGHTAWARE")
+  providerFlightId String?
+  state String @default("ACTIVE")
+  nextCheckAt DateTime
+  windowEndsAt DateTime
+  leaseUntil DateTime?
+  leaseToken String?
+  lastCheckedAt DateTime?
+  lastSuccessAt DateTime?
+  lastError String?
+  failures Int @default(0)
+  dailyLimit Int @default(24)
+  usageDay String?
+  callsToday Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([itemId, providerId])
+  @@index([state, nextCheckAt])
+}
+model ProviderUsage {
+  id String @id @default(cuid())
+  providerId String
+  day String
+  calls Int @default(0)
+  @@unique([providerId, day])
+}
+model DocumentImport {
+ id String @id @default(cuid())
+ ownerId String
+ fileName String
+ mimeType String
+ byteLength Int
+ ciphertext Bytes?
+ status String @default("STORED")
+ version Int @default(1)
+ draft Json?
+ error String?
+ consentedAt DateTime?
+ extractionAttempts Int @default(0)
+ confirmedTripId String?
+ confirmedTrip Trip? @relation(fields:[confirmedTripId],references:[id],onDelete:SetNull)
+ confirmationDigest String?
+ expiresAt DateTime
+ purgedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([ownerId,createdAt])
+ @@index([status,updatedAt])
+}
+model NotificationPreference {
+ ownerId String @id
+ inAppEnabled Boolean @default(true)
+ includeReplay Boolean @default(false)
+ updatedAt DateTime @updatedAt
+}
+model Notification {
+ id String @id @default(cuid())
+ ownerId String
+ tripId String?
+ trip Trip? @relation(fields:[tripId],references:[id],onDelete:Cascade)
+ sourceKey String @unique
+ kind String
+ title String
+ message String
+ readAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([ownerId,createdAt])
+}
+model WorkerCursor {
+ id String @id
+ cursor Int @default(0)
+}
