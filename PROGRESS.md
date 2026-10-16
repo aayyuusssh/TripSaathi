@@ -243,3 +243,9 @@ TinyFish API key is configured locally; the earlier real public-policy smoke run
 
 - Added README instructions for stopping/restarting development processes and Docker services without removing stored data.
 - Documentation-only scope; checked diff whitespace and command names against the existing dev wrapper/Compose setup. Git push verification is performed separately against the remote branch.
+
+## Vercel shared-package build fix — 16 October 2026
+
+- Vercel runs the web package build directly from apps/web; the former command skipped compiling domain/dist, which is excluded from Git and is the package entry point. Added domain compilation and explicit injected-workspace synchronization before Next.js build. No database generation or supplier calls required for this frontend dependency.
+- README now records Vercel root/build/outside-root settings and distinguishes successful frontend compilation from the still-required hosted API/worker/database/auth configuration.
+- Verification: direct web-package production build PASS (shared-package compilation, Next.js webpack, TypeScript, prerender and traces); 78 domain/identity/client tests PASS. Used the existing Windows absolute-path realpath preload for local OneDrive compatibility. Vercel cloud redeploy remains to be observed; no supplier requests made.

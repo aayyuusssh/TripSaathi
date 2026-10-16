@@ -228,6 +228,14 @@ Windows/OneDrive users should use `scripts/project.ps1`: it includes this host's
 
 ## Configuration
 
+### Vercel frontend build
+
+Set **Root Directory** to `apps/web`, **Framework Preset** to Next.js, and **Build Command** to `pnpm run build`. Enable **Include source files outside of the Root Directory in the Build Step** so the shared packages and scripts are available. Leave the output directory at the Next.js default. Deploy the latest `main` commit rather than redeploying an older failed commit.
+
+The web build compiles `@tripsaathi/domain` and refreshes its injected workspace copy before Next.js runs. Generated `dist` files are intentionally not committed. The Prisma postinstall schema warning is unrelated to this frontend dependency build; this command does not provision a backend database.
+
+This configures the frontend build only. The current API rewrite points to local `127.0.0.1:4000`; a functional hosted application still needs a separately hosted API/worker, PostgreSQL/Redis, a deployed API destination and appropriate managed-auth configuration.
+
 Edit the **ignored root `.env`**, then restart development processes. Never commit real keys or paste them into issues.
 
 | Capability | Variables | Requirement |
