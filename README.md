@@ -327,6 +327,13 @@ The legacy `scripts/integration.mjs` HTTP check needs `AUTH_MODE=demo` and runni
 ## Troubleshooting
 
 <details>
+<summary><strong>How do I stop and restart local development?</strong></summary>
+
+Press **Ctrl+C** in the terminal running `dev` to stop the web, API and worker. Run the same `dev` command to restart. PostgreSQL and Redis keep running separately in Docker; `docker compose stop` stops them without deleting their stored data. Run `docker compose up -d --wait` before starting the app again.
+
+</details>
+
+<details>
 <summary><strong>Docker is running, but the app is unavailable</strong></summary>
 
 Docker supplies PostgreSQL/Redis, not application processes. Run `setup`, then keep `dev` running. Check `node scripts/doctor.cjs` in another terminal.

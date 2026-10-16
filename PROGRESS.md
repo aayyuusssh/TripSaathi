@@ -238,3 +238,8 @@ TinyFish API key is configured locally; the earlier real public-policy smoke run
 - Checked commands/defaults against package.json, project.ps1, verify-local.mjs, Docker Compose and .env.example. Documented live versus sandbox/user-reported outcomes, provider boundaries, import consent/encryption, request caps and future scope. Updated stale README browser-login status using recorded acceptance.
 - Documentation-only change. Historical setup notes are labelled; no license or CI passing badge was invented. No provider calls or runtime changes.
 - Next: review the rendered README after publishing; authorized supplier/rail access and production hardening remain future work.
+
+## Small documentation update and push check — 16 October 2026
+
+- Added README instructions for stopping/restarting development processes and Docker services without removing stored data.
+- Documentation-only scope; checked diff whitespace and command names against the existing dev wrapper/Compose setup. Git push verification is performed separately against the remote branch.
