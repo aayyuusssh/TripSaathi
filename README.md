@@ -234,7 +234,7 @@ Set **Root Directory** to `apps/web`, **Framework Preset** to Next.js, and **Bui
 
 The web build compiles `@tripsaathi/domain` and refreshes its injected workspace copy before Next.js runs. Generated `dist` files are intentionally not committed. The Prisma postinstall schema warning is unrelated to this frontend dependency build; this command does not provision a backend database.
 
-This configures the frontend build only. The current API rewrite points to local `127.0.0.1:4000`; a functional hosted application still needs a separately hosted API/worker, PostgreSQL/Redis, a deployed API destination and appropriate managed-auth configuration.
+For a working hosted application, follow [DEPLOYMENT.md](DEPLOYMENT.md): deploy the API/worker and PostgreSQL/Redis on Render, then set Vercel's `API_BASE_URL` and matching Clerk credentials. Vercel builds require an explicit HTTPS backend origin and managed login; local development retains its loopback default.
 
 Edit the **ignored root `.env`**, then restart development processes. Never commit real keys or paste them into issues.
 
@@ -389,6 +389,7 @@ The modular design leaves room for a booking platform later. Importing a reserva
 | Document | Purpose |
 | --- | --- |
 | [Acceptance checklist](ACCEPTANCE.md) | Automated/browser checks and supplier boundaries. |
+| [Cloud deployment guide](DEPLOYMENT.md) | Vercel + Render setup, credentials, service wiring and cloud verification. |
 | [Environment template](.env.example) | Supported configuration and local defaults. |
 | [Technical architecture](TripSaathi-Technical-Architecture.md) | Module design and longer-term plan; some sections describe future scope. |
 | [Implementation history](PROGRESS.md) | Milestones, verification and outstanding work. |

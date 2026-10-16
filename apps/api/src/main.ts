@@ -12,7 +12,7 @@ import {interval,concatMap,startWith} from 'rxjs';
 import {timingSafeEqual} from 'node:crypto';
 import {SwaggerModule,DocumentBuilder} from '@nestjs/swagger';
 import {prisma} from '@tripsaathi/database';
-import {createTripSchema,demoTrip,providerCapabilities} from '@tripsaathi/domain';
+import {createTripSchema,demoTrip,providerCapabilities,serverDeployment} from '@tripsaathi/domain';
 import {z} from 'zod';
 import {TripsService,parsed} from './trips.service';
 import {IdentityGuard,identityConfig,owner,type PrincipalRequest} from './identity';
@@ -51,7 +51,7 @@ class TripsController{
   @Get('trips/:id/report')tripReport(@Req()req:PrincipalRequest,@Param('id')id:string){return this.release.report(id,owner(req));}
   @Get('operations')operations(@Req()req:PrincipalRequest){return this.notifications.operations(owner(req));}
   @Post('trips/:id/remove')removeTrip(@Req()req:PrincipalRequest,@Param('id')id:string,@Body()body:unknown){return this.notifications.removeTrip(owner(req),id,body);}
-  @Get('health')async health(){let database='unavailable';let timer:ReturnType<typeof setTimeout>|undefined;try{await Promise.race([prisma.$queryRaw`SELECT 1`,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Database probe timed out')),2000);})]);database='connected';}catch{}finally{if(timer)clearTimeout(timer);}return{service:'TripSaathi',mode:'demo',database,tinyfishConfigured:Boolean(process.env.TINYFISH_API_KEY),execution:'SANDBOX_ONLY',authentication:process.env.AUTH_MODE==='clerk'?'CLERK_SESSION':process.env.AUTH_MODE==='oidc'?'OIDC_BEARER':'LOCAL_DEMO_ONLY'};}
+  @Get('health')async health(){let database='unavailable';let timer:ReturnType<typeof setTimeout>|undefined;try{await Promise.race([prisma.$queryRaw`SELECT 1`,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Database probe timed out')),2000);})]);database='connected';}catch{}finally{if(timer)clearTimeout(timer);}return{service:'TripSaathi',mode:process.env.APP_MODE??'demo',database,tinyfishConfigured:Boolean(process.env.TINYFISH_API_KEY),execution:'SANDBOX_ONLY',authentication:process.env.AUTH_MODE==='clerk'?'CLERK_SESSION':process.env.AUTH_MODE==='oidc'?'OIDC_BEARER':'LOCAL_DEMO_ONLY'};}
   @Get('providers')providers(){return providerCapabilities(Boolean(process.env.TINYFISH_API_KEY),Boolean(process.env.FLIGHTAWARE_API_KEY),Boolean(process.env.AIRLABS_API_KEY),Boolean(process.env.SERPAPI_API_KEY));}
   @Get('trips/:id/monitoring')monitors(@Req()req:PrincipalRequest,@Param('id')id:string){return this.monitoring.list(id,owner(req));}
   @Post('trips/:id/items/:itemId/monitoring')enableMonitor(@Req()req:PrincipalRequest,@Param('id')id:string,@Param('itemId')itemId:string,@Body()body:unknown){return this.monitoring.enable(id,itemId,owner(req),body);}
@@ -87,12 +87,13 @@ class TripsController{
 }
 @Module({controllers:[TripsController],providers:[TripsService,MonitoringService,WorkflowService,ImportsService,NotificationsService,RuntimeService,ReleaseService,ResearchRecoveryService,FlightSearchService,HotelSearchService]})class AppModule{}
 async function bootstrap(){
-  if(process.env.APP_MODE!=='demo')throw new Error('This release remains localhost-only. Remote deployment is not enabled.');
+  const deployment=serverDeployment(process.env);
   const identity=identityConfig(process.env);const app=await NestFactory.create(AppModule);app.useGlobalGuards(new IdentityGuard(identity));
   app.use((_req:unknown,res:Response,next:()=>void)=>{res.setHeader('X-Request-Id',randomUUID());res.setHeader('Cache-Control','no-store');next();});
-  app.enableCors({origin:[process.env.WEB_ORIGIN||'http://localhost:3000','http://127.0.0.1:3000']});
+  app.enableCors({origin:deployment.origins});
   const document=SwaggerModule.createDocument(app,new DocumentBuilder().setTitle('TripSaathi itinerary/recovery API').setVersion('0.2.0').addBearerAuth().build());SwaggerModule.setup('docs',app,document);
-  await app.listen(Number(process.env.API_PORT||4000),'127.0.0.1');console.log(`TripSaathi API: http://127.0.0.1:4000/docs (identity: ${identity.mode}; localhost only)`);
+  app.enableShutdownHooks();
+  await app.listen(deployment.port,deployment.host);console.log(`TripSaathi API listening on port ${deployment.port} (identity: ${identity.mode}; ${deployment.hosted?'hosted':'local'})`);
 }
 if(require.main===module)bootstrap().catch(error=>{console.error(error.message);process.exitCode=1;});
 

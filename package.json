@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "pnpm build:packages && concurrently -n web,api,worker -c cyan,green,yellow \"pnpm --filter @tripsaathi/web dev\" \"pnpm --filter @tripsaathi/api dev\" \"pnpm --filter @tripsaathi/worker dev\"",
     "build:packages": "pnpm --filter @tripsaathi/domain build && pnpm --filter @tripsaathi/database build && node scripts/sync-workspace.cjs",
+    "build:backend": "pnpm db:generate && pnpm build:packages && pnpm --filter @tripsaathi/api build && pnpm --filter @tripsaathi/worker build",
     "build": "pnpm build:packages && pnpm --filter @tripsaathi/api build && pnpm --filter @tripsaathi/worker build && pnpm --filter @tripsaathi/web build",
     "typecheck": "pnpm build:packages && pnpm -r typecheck",
     "test": "pnpm --filter @tripsaathi/domain test",

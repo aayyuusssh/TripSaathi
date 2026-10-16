@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './deployment';
 export * from './operations';
 export * from './status-provider';
 export * from './flight-search';
