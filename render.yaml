@@ -1,14 +1,13 @@
-# Review Render's current charges before applying. This creates paid services.
+# Free demo only: API + worker share one sleeping web service. See DEPLOYMENT.md.
 # Root directory is the repository root, NOT apps/api or apps/worker.
 services:
   - type: web
     name: tripsaathi-api
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     buildCommand: npm install --global pnpm@10.32.1 && pnpm install --frozen-lockfile --prod=false && pnpm build:backend
-    preDeployCommand: pnpm db:deploy
-    startCommand: cd apps/api && node dist/main.js
+    startCommand: node scripts/start-cloud.cjs
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_VERSION
@@ -44,54 +43,15 @@ services:
         sync: false
       - key: FLIGHT_STATUS_PROVIDER
         value: AIRLABS
-  - type: worker
-    name: tripsaathi-worker
-    runtime: node
-    plan: starter
-    region: frankfurt
-    buildCommand: npm install --global pnpm@10.32.1 && pnpm install --frozen-lockfile --prod=false && pnpm build:backend
-    startCommand: cd apps/worker && node dist/main.js
-    envVars:
-      - key: NODE_VERSION
-        value: 22.20.0
-      - key: NODE_ENV
-        value: production
-      - key: APP_MODE
-        value: hosted
-      - key: AUTH_MODE
-        value: clerk
-      - key: WEB_ORIGIN
-        value: https://trip-saathi-sigma.vercel.app
-      - key: DATABASE_URL
-        fromDatabase:
-          name: tripsaathi-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          name: tripsaathi-redis
-          type: keyvalue
-          property: connectionString
-      - key: IMPORT_ENCRYPTION_KEY
-        fromService: {name: tripsaathi-api, type: web, envVarKey: IMPORT_ENCRYPTION_KEY}
-      - key: TINYFISH_API_KEY
-        fromService: {name: tripsaathi-api, type: web, envVarKey: TINYFISH_API_KEY}
-      - key: GEMINI_API_KEY
-        fromService: {name: tripsaathi-api, type: web, envVarKey: GEMINI_API_KEY}
-      - key: AIRLABS_API_KEY
-        fromService: {name: tripsaathi-api, type: web, envVarKey: AIRLABS_API_KEY}
-      - key: SERPAPI_API_KEY
-        fromService: {name: tripsaathi-api, type: web, envVarKey: SERPAPI_API_KEY}
-      - key: FLIGHT_STATUS_PROVIDER
-        value: AIRLABS
   - type: keyvalue
     name: tripsaathi-redis
-    plan: starter
+    plan: free
     region: frankfurt
     maxmemoryPolicy: noeviction
     ipAllowList: []
 databases:
   - name: tripsaathi-db
-    plan: basic-256mb
+    plan: free
     region: frankfurt
     databaseName: tripsaathi
     user: tripsaathi

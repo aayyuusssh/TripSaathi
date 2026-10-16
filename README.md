@@ -234,7 +234,7 @@ Set **Root Directory** to `apps/web`, **Framework Preset** to Next.js, and **Bui
 
 The web build compiles `@tripsaathi/domain` and refreshes its injected workspace copy before Next.js runs. Generated `dist` files are intentionally not committed. The Prisma postinstall schema warning is unrelated to this frontend dependency build; this command does not provision a backend database.
 
-For a working hosted application, follow [DEPLOYMENT.md](DEPLOYMENT.md): deploy the API/worker and PostgreSQL/Redis on Render, then set Vercel's `API_BASE_URL` and matching Clerk credentials. Vercel builds require an explicit HTTPS backend origin and managed login; local development retains its loopback default.
+For a hosted demo, follow [DEPLOYMENT.md](DEPLOYMENT.md): the default Render Blueprint uses only free plans, with API and worker as separate processes in one sleeping web service plus free PostgreSQL/Redis. Monitoring pauses during sleep and the free database expires after 30 days. Set Vercel's `API_BASE_URL` and matching Clerk credentials. Vercel builds require an explicit HTTPS backend origin and managed login; local development retains its loopback default.
 
 Edit the **ignored root `.env`**, then restart development processes. Never commit real keys or paste them into issues.
 

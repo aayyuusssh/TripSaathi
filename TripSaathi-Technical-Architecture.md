@@ -2,6 +2,8 @@
 
 Prepared 14 October 2026. This is a proposed architecture, not a claim of implemented integrations or live website validation.
 
+Hosting update (16 October 2026): the default Render Blueprint is a free demo profile. A supervisor runs migrations and then separate API/worker child processes inside one free web service, with shared hosted PostgreSQL/Redis and managed identity. Both processes stop when the service sleeps; free database expiry and queue-loss limits apply. This co-location changes deployment only, not module boundaries, and does not provide continuous monitoring. See DEPLOYMENT.md.
+
 ## 1. Product and architecture decision
 
 Build an existing-trip recovery platform first. Users add flights, trains, hotels and transfers purchased elsewhere. The system records dependencies, monitors supported services, detects downstream risk, investigates recovery options, requests precise approval and verifies action outcomes. Future bookings created inside TripSaathi produce the same trip records and use the same monitoring and recovery pipeline.
